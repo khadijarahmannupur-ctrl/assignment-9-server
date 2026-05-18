@@ -4,7 +4,7 @@ dns.setServers(["8.8.8.8", "8.8.4.4"]);
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 dotenv.config();
 
 const uri = process.env.MONGODB_URI;
@@ -28,17 +28,34 @@ async function run() {
     await client.connect();
     
     const db = client.db("mediqueue");
-    const tutorCollection = db.collection("tutors");
+    const tutorsCollection = db.collection("tutors");
+    const addTutorCollection = db.collection("addTutors");
 
-    app.get('/tutor', async(req, res)=> {
-      const result = await tutorCollection.find().toArray();
+    app.get('/tutors', async(req, res)=> {
+      const result = await tutorsCollection.find().toArray();
       res.send(result);
     })
 
-    app.post('/tutor', async(req, res)=> {
+    app.get('/feature', async(req, res)=> {
+      const result = await tutorsCollection.find().limit(6).toArray();
+      res.send(result);
+    })
+
+    app.get('/tutors/:tutorId', async(req, res)=> {
+      const {tutorId} = req.params;
+      const result = await tutorsCollection.findOne({_id : new ObjectId(tutorId)});
+      res.send(result);
+    })
+
+    app.get('/addTutor', async(req, res)=> {
+      const result = await addTutorCollection.find().toArray();
+      res.send(result);
+    })
+
+    app.post('/addTutor', async(req, res)=> {
       const tutorData = req.body;
       console.log(tutorData)
-      const result = await tutorCollection.insertOne(tutorData);
+      const result = await addTutorCollection.insertOne(tutorData);
       res.send(result);
     })
 
