@@ -54,7 +54,7 @@ async function run() {
 
     app.post('/addTutor', async(req, res)=> {
       const tutorData = req.body;
-      console.log(tutorData)
+      // console.log(tutorData)
       const result = await addTutorCollection.insertOne(tutorData);
       res.send(result);
     })
@@ -66,6 +66,12 @@ async function run() {
         {_id: new ObjectId(id)},
         {$set: updatedData}
       )
+      res.send(result);
+    })
+
+    app.delete('/addTutor/:id', async(req, res)=> {
+      const {id} = req.params;
+      const result = await addTutorCollection.deleteOne({_id: new ObjectId(id)});
       res.send(result);
     })
 
