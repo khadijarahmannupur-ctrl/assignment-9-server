@@ -25,25 +25,25 @@ const client = new MongoClient(uri, {
 });
 
 const JWKS = createRemoteJWKSet(
-  new URL ('http://localhost:3000/api/auth/jwks')
+  new URL('http://localhost:3000/api/auth/jwks')
 )
 
-const verifyToken =async (req, res, next)=>{
+const verifyToken = async (req, res, next) => {
   const authHearer = req?.headers.authorization;
-  if(!authHearer){
-    return res.status(401).json({message: "Unauthorized"})
+  if (!authHearer) {
+    return res.status(401).json({ message: "Unauthorized" })
   }
   const token = authHearer.split(" ")[1];
-  if(!token){
-    return res.status(401).json({message: "Unauthorized"})
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" })
   }
-  
+
   try {
-    const {payload} = await jwtVerify(token, JWKS);
+    const { payload } = await jwtVerify(token, JWKS);
     console.log(payload);
     next();
   } catch (error) {
-    return res.status(403).json({message: "Forbidden"})
+    return res.status(403).json({ message: "Forbidden" })
   }
 }
 
@@ -54,6 +54,7 @@ async function run() {
     const db = client.db("mediqueue");
     const tutorsCollection = db.collection("tutors");
     const addTutorCollection = db.collection("addTutors");
+    const bookingCollection = db.collection("bookings")
 
     app.get('/feature', async (req, res) => {
       const result = await tutorsCollection.find().limit(6).toArray();
@@ -96,6 +97,37 @@ async function run() {
     app.delete('/addTutor/:id', verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await addTutorCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    })
+
+    app.post('/booking', async (req, res) => {
+      const bookingData = req.body;
+      const tutor = await tutorsCollection.findOne(
+        { _id: new ObjectId(bookingData.tutorId) }
+      )
+      if (tutor.totalSlot <= 0) {
+        return res.send({
+          success: false,
+          message: "No available slots left."
+        })
+      }
+
+      const today = new Date();
+      const sessionDate = new Date(tutor.sessionDate);
+      if (today > sessionDate) {
+        return res.send({
+          success: false,
+          message: "Booking time has expired."
+        })
+      }
+
+      const result = await bookingCollection.insertOne(bookingData);
+
+      await tutorsCollection.updateOne(
+        {_id: new ObjectId(bookingData.tutorId)},
+        {$inc: {totalSlot : -1}}
+      )
+
       res.send(result);
     })
 
