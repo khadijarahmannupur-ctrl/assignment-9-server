@@ -40,7 +40,7 @@ const verifyToken = async (req, res, next) => {
 
   try {
     const { payload } = await jwtVerify(token, JWKS);
-    console.log(payload);
+    // console.log(payload);
     next();
   } catch (error) {
     return res.status(403).json({ message: "Forbidden" })
@@ -100,6 +100,21 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/booking/:userId', async (req, res) => {
+      const { userId } = req.params;
+      const result = await bookingCollection.find({ studentId: userId }).toArray();
+      res.send(result)
+    })
+
+    app.patch('/booking/:id', async (req, res) => {
+      const { id } = req.params;
+      const result = await bookingCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { bookStatus: "cancelled" } }
+      )
+      res.send(result)
+    })
+
     app.post('/booking', async (req, res) => {
       const bookingData = req.body;
       const tutor = await tutorsCollection.findOne(
@@ -124,8 +139,8 @@ async function run() {
       const result = await bookingCollection.insertOne(bookingData);
 
       await tutorsCollection.updateOne(
-        {_id: new ObjectId(bookingData.tutorId)},
-        {$inc: {totalSlot : -1}}
+        { _id: new ObjectId(bookingData.tutorId) },
+        { $inc: { totalSlot: -1 } }
       )
 
       res.send(result);
