@@ -61,10 +61,28 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/tutors', async (req, res) => {
-      const result = await tutorsCollection.find().toArray();
+    app.get("/tutors", async (req, res) => {
+      const { search = "", startDate, endDate } = req.query;
+
+      let query = {};
+
+      if (search) {
+        query.tutorName = {
+          $regex: search,
+          $options: "i",
+        };
+      }
+
+      if (startDate && endDate) {
+        query.sessionDate = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+
+      const result = await tutorsCollection.find(query).toArray();
       res.send(result);
-    })
+    });
 
     app.get('/tutors/:tutorId', verifyToken, async (req, res) => {
       const { tutorId } = req.params;
