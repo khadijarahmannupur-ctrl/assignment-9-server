@@ -83,7 +83,7 @@ async function run() {
       res.send(result);
     })
 
-    app.patch('/addTutor/:id', async (req, res) => {
+    app.patch('/addTutor/:id', verifyToken, async (req, res) => {
       const { id } = req.params;
       const updatedData = req.body;
       const result = await addTutorCollection.updateOne(
@@ -93,7 +93,7 @@ async function run() {
       res.send(result);
     })
 
-    app.delete('/addTutor/:id', async (req, res) => {
+    app.delete('/addTutor/:id', verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await addTutorCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
