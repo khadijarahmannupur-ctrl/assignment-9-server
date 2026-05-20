@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 dotenv.config();
 
 const uri = process.env.MONGODB_URI;
@@ -23,62 +24,85 @@ const client = new MongoClient(uri, {
   }
 });
 
+const JWKS = createRemoteJWKSet(
+  new URL ('http://localhost:3000/api/auth/jwks')
+)
+
+const verifyToken =async (req, res, next)=>{
+  const authHearer = req?.headers.authorization;
+  if(!authHearer){
+    return res.status(401).json({message: "Unauthorized"})
+  }
+  const token = authHearer.split(" ")[1];
+  if(!token){
+    return res.status(401).json({message: "Unauthorized"})
+  }
+  
+  try {
+    const {payload} = await jwtVerify(token, JWKS);
+    console.log(payload);
+    next();
+  } catch (error) {
+    return res.status(403).json({message: "Forbidden"})
+  }
+}
+
 async function run() {
   try {
     await client.connect();
-    
+
     const db = client.db("mediqueue");
     const tutorsCollection = db.collection("tutors");
     const addTutorCollection = db.collection("addTutors");
 
-    app.get('/tutors', async(req, res)=> {
-      const result = await tutorsCollection.find().toArray();
-      res.send(result);
-    })
-
-    app.get('/feature', async(req, res)=> {
+    app.get('/feature', async (req, res) => {
       const result = await tutorsCollection.find().limit(6).toArray();
       res.send(result);
     })
 
-    app.get('/tutors/:tutorId', async(req, res)=> {
-      const {tutorId} = req.params;
-      const result = await tutorsCollection.findOne({_id : new ObjectId(tutorId)});
+    app.get('/tutors', async (req, res) => {
+      const result = await tutorsCollection.find().toArray();
       res.send(result);
     })
 
-    app.get('/addTutor', async(req, res)=> {
+    app.get('/tutors/:tutorId', verifyToken, async (req, res) => {
+      const { tutorId } = req.params;
+      const result = await tutorsCollection.findOne({ _id: new ObjectId(tutorId) });
+      res.send(result);
+    })
+
+    app.get('/addTutor', verifyToken, async (req, res) => {
       const result = await addTutorCollection.find().toArray();
       res.send(result);
     })
 
-    app.post('/addTutor', async(req, res)=> {
+    app.post('/addTutor', verifyToken, async (req, res) => {
       const tutorData = req.body;
       // console.log(tutorData)
       const result = await addTutorCollection.insertOne(tutorData);
       res.send(result);
     })
 
-    app.patch('/addTutor/:id', async(req, res)=> {
-      const {id} = req.params;
+    app.patch('/addTutor/:id', async (req, res) => {
+      const { id } = req.params;
       const updatedData = req.body;
       const result = await addTutorCollection.updateOne(
-        {_id: new ObjectId(id)},
-        {$set: updatedData}
+        { _id: new ObjectId(id) },
+        { $set: updatedData }
       )
       res.send(result);
     })
 
-    app.delete('/addTutor/:id', async(req, res)=> {
-      const {id} = req.params;
-      const result = await addTutorCollection.deleteOne({_id: new ObjectId(id)});
+    app.delete('/addTutor/:id', async (req, res) => {
+      const { id } = req.params;
+      const result = await addTutorCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
-    
+
     // await client.close();
   }
 }
