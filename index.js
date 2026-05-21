@@ -118,13 +118,13 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/booking/:userId', async (req, res) => {
+    app.get('/booking/:userId', verifyToken, async (req, res) => {
       const { userId } = req.params;
       const result = await bookingCollection.find({ studentId: userId }).toArray();
       res.send(result)
     })
 
-    app.patch('/booking/:id', async (req, res) => {
+    app.patch('/booking/:id', verifyToken, async (req, res) => {
       const { id } = req.params;
       const result = await bookingCollection.updateOne(
         { _id: new ObjectId(id) },
@@ -133,7 +133,7 @@ async function run() {
       res.send(result)
     })
 
-    app.post('/booking', async (req, res) => {
+    app.post('/booking', verifyToken, async (req, res) => {
       const bookingData = req.body;
       const tutor = await tutorsCollection.findOne(
         { _id: new ObjectId(bookingData.tutorId) }
